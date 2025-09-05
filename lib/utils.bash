@@ -2,7 +2,6 @@
 
 set -euo pipefail
 
-# TODO: Ensure this is the correct GitHub homepage where releases can be downloaded for podman.
 GH_REPO="https://github.com/bgaillard/asdf-podman"
 TOOL_NAME="podman"
 TOOL_TEST="podman --version"
@@ -14,9 +13,8 @@ fail() {
 
 curl_opts=(-fsSL)
 
-# NOTE: You might want to remove this if podman is not hosted on GitHub releases.
 if [ -n "${GITHUB_API_TOKEN:-}" ]; then
-	curl_opts=("${curl_opts[@]}" -H "Authorization: token $GITHUB_API_TOKEN")
+	curl_opts=("${curl_opts[@]}" -H \"Authorization: Bearer "${GITHUB_API_TOKEN}"\")
 fi
 
 sort_versions() {
@@ -31,9 +29,40 @@ list_github_tags() {
 }
 
 list_all_versions() {
-	# TODO: Adapt this. By default we simply list the tag names from GitHub releases.
-	# Change this function if podman has other means of determining installable versions.
-	list_github_tags
+	local releases_path cmd_prefix next_link all_versions versions cmd cmd_out
+
+	releases_path=https://api.github.com/repos/containers/podman/releases
+
+	cmd_prefix="curl ${curl_opts[*]} --verbose --retry 10 --retry-delay 2 -s"
+
+	next_link="${releases_path}?per_page=100&page=1"
+	all_versions=""
+
+	while [ -n "${next_link}" ]; do
+
+		# Download releases page
+		cmd="${cmd_prefix} \"${next_link}\""
+		cmd_out=$(eval "${cmd}" 2>&1)
+
+		# Get versions
+		versions=$(echo "${cmd_out}" | grep "\"tag_name\":" | sed 's/^ *"tag_name"\: *"v\?\(.*\)", *$/\1/')
+		all_versions="${versions}\n${all_versions}"
+
+		# Get next link
+		next_link=$(echo "${cmd_out}" | grep '< link: ')
+
+		if [[ ${next_link} == *'rel="next"'* ]]; then
+			# shellcheck disable=SC2001
+			next_link=$(echo "${next_link}" | sed 's/< link: <\(.*\)>; rel="next".*$/\1/')
+			# shellcheck disable=SC2001
+			next_link=$(echo "${next_link}" | sed 's/^.*<\(.*\)$/\1/')
+		else
+			next_link=""
+		fi
+
+	done
+
+	echo "${all_versions}"
 }
 
 download_release() {
