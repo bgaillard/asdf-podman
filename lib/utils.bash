@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-GH_REPO="https://github.com/bgaillard/asdf-podman"
+GH_REPO="https://github.com/containers/podman"
 TOOL_NAME="podman"
 TOOL_TEST="podman --version"
 
@@ -14,7 +14,7 @@ fail() {
 curl_opts=(-fsSL)
 
 if [ -n "${GITHUB_API_TOKEN:-}" ]; then
-	curl_opts=("${curl_opts[@]}" -H \"Authorization: Bearer "${GITHUB_API_TOKEN}"\")
+	curl_opts=("${curl_opts[@]}" -H "Authorization: Bearer ${GITHUB_API_TOKEN}")
 fi
 
 sort_versions() {
@@ -29,11 +29,9 @@ list_github_tags() {
 }
 
 list_all_versions() {
-	local releases_path cmd_prefix next_link all_versions versions cmd cmd_out
+	local releases_path next_link all_versions versions cmd_out
 
 	releases_path=https://api.github.com/repos/containers/podman/releases
-
-	cmd_prefix="curl ${curl_opts[*]} --verbose --retry 10 --retry-delay 2 -s"
 
 	next_link="${releases_path}?per_page=100&page=1"
 	all_versions=""
@@ -41,8 +39,7 @@ list_all_versions() {
 	while [ -n "${next_link}" ]; do
 
 		# Download releases page
-		cmd="${cmd_prefix} \"${next_link}\""
-		cmd_out=$(eval "${cmd}" 2>&1)
+		cmd_out=$(curl "${curl_opts[*]}" --verbose --retry 10 --retry-delay 2 -s "${next_link}" 2>&1)
 
 		# Get versions
 		versions=$(echo "${cmd_out}" | grep "\"tag_name\":" | sed 's/^ *"tag_name"\: *"v\?\(.*\)", *$/\1/')
@@ -70,11 +67,11 @@ download_release() {
 	version="$1"
 	filename="$2"
 
-	# TODO: Adapt the release URL convention for podman
-	url="$GH_REPO/archive/v${version}.tar.gz"
+	# FIXME: Add support for other OS/ARCH combinations.
+	url="$GH_REPO/releases/download/v${version}/podman-remote-static-linux_amd64.tar.gz"
 
 	echo "* Downloading $TOOL_NAME release $version..."
-	curl "${curl_opts[@]}" -o "$filename" -C - "$url" || fail "Could not download $url"
+	curl "${curl_opts[@]}" -L -s -o "$filename" -C - "$url" || fail "Could not download $url"
 }
 
 install_version() {

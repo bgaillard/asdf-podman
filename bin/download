@@ -21,3 +21,6 @@ tar -xzf "$release_file" -C "$ASDF_DOWNLOAD_PATH" --strip-components=1 || fail "
 
 # Remove the tar.gz file since we don't need to keep it
 rm "$release_file"
+
+# Rename the binary to the expected name
+mv "${ASDF_DOWNLOAD_PATH}/podman-remote-static-linux_amd64" "$ASDF_DOWNLOAD_PATH/podman"
