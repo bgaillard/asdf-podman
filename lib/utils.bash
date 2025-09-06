@@ -12,7 +12,7 @@ fail() {
 	exit 1
 }
 
-curl_opts=(-fsSL)
+curl_opts=(-fsSL -s --retry 3 --retry-delay 2)
 
 if [ -n "${GITHUB_API_TOKEN:-}" ]; then
 	curl_opts=("${curl_opts[@]}" -H "Authorization: Bearer ${GITHUB_API_TOKEN}")
@@ -27,13 +27,19 @@ grep_versions() {
 	local cmd_out
 	cmd_out="$1"
 
-	echo "${cmd_out}" | grep "\"tag_name\":" | sed 's/^ *"tag_name"\: *"v\?\(.*\)", *$/\1/'
+	if [[ "$(uname)" == "Darwin" ]]; then
+		# MacOS uses BSD sed
+		echo "${cmd_out}" | grep "\"tag_name\":" | sed -E 's/^ *"tag_name": *"v(.*)", *$/\1/'
+	else
+		# Linux uses GNU sed
+		echo "${cmd_out}" | grep "\"tag_name\":" | sed 's/^ *"tag_name"\: *"v\?\(.*\)", *$/\1/'
+	fi
 }
 
 latest_version() {
 	local cmd_out
 
-	cmd_out=$(curl "${curl_opts[*]}" --verbose --retry 10 --retry-delay 2 -s "${RELEASES_URL_PREFIX}?per_page=1&page=1" 2>&1)
+	cmd_out=$(curl "${curl_opts[@]}" "${RELEASES_URL_PREFIX}?per_page=1&page=1" 2>&1)
 	grep_versions "${cmd_out}"
 }
 
@@ -52,11 +58,12 @@ list_all_versions() {
 	while [ -n "${next_link}" ]; do
 
 		# Download releases page
-		cmd_out=$(curl "${curl_opts[*]}" --verbose --retry 10 --retry-delay 2 -s "${next_link}" 2>&1)
+		cmd_out=$(curl "${curl_opts[@]}" --verbose "${next_link}" 2>&1)
 
 		# Get versions
 		versions=$(grep_versions "${cmd_out}")
-		all_versions="${versions}\n${all_versions}"
+		all_versions="${versions}
+${all_versions}"
 
 		# Get next link
 		next_link=$(echo "${cmd_out}" | grep '< link: ')
@@ -76,12 +83,17 @@ list_all_versions() {
 }
 
 download_release() {
-	local version filename url
+	local archive_name version filename url
 	version="$1"
 	filename="$2"
 
-	# FIXME: Add support for other OS/ARCH combinations.
-	url="$GH_REPO/releases/download/v${version}/podman-remote-static-linux_amd64.tar.gz"
+	if [[ "$(uname)" == "Darwin" ]]; then
+		archive_name="podman-remote-release-darwin_amd64.zip"
+	else
+		archive_name="podman-remote-static-linux_amd64.tar.gz"
+	fi
+
+	url="$GH_REPO/releases/download/v${version}/${archive_name}"
 
 	echo "* Downloading $TOOL_NAME release $version..."
 	curl "${curl_opts[@]}" -L -s -o "$filename" -C - "$url" || fail "Could not download $url"

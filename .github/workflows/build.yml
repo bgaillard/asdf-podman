@@ -7,6 +7,25 @@ on:
   pull_request:
 
 jobs:
+  #test_macos:
+  #  name: Test list-all
+  #  runs-on: macos-latest
+  #  steps:
+  #    - name: Checkout repository
+  #      uses: actions/checkout@v3
+
+  #    - name: Set up asdf
+  #      uses: asdf-vm/actions/setup@v3
+  #      with:
+  #        version: v0.11.3
+
+  #    - name: List all versions
+  #      run: |
+  #        #curl -fsSL -s --retry 3 --retry-delay 2 --verbose -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "https://api.github.com/repos/containers/podman/releases?per_page=100&page=1"
+  #        ./bin/list-all
+  #      env:
+  #        GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   plugin_test:
     name: asdf plugin test
     strategy:
