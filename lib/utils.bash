@@ -3,6 +3,7 @@
 set -euo pipefail
 
 GH_REPO="https://github.com/containers/podman"
+RELEASES_URL_PREFIX="https://api.github.com/repos/containers/podman/releases"
 TOOL_NAME="podman"
 TOOL_TEST="podman --version"
 
@@ -22,6 +23,20 @@ sort_versions() {
 		LC_ALL=C sort -t. -k 1,1 -k 2,2n -k 3,3n -k 4,4n -k 5,5n | awk '{print $2}'
 }
 
+grep_versions() {
+	local cmd_out
+	cmd_out="$1"
+
+	echo "${cmd_out}" | grep "\"tag_name\":" | sed 's/^ *"tag_name"\: *"v\?\(.*\)", *$/\1/'
+}
+
+latest_version() {
+	local cmd_out
+
+	cmd_out=$(curl "${curl_opts[*]}" --verbose --retry 10 --retry-delay 2 -s "${RELEASES_URL_PREFIX}?per_page=1&page=1" 2>&1)
+	grep_versions "${cmd_out}"
+}
+
 list_github_tags() {
 	git ls-remote --tags --refs "$GH_REPO" |
 		grep -o 'refs/tags/.*' | cut -d/ -f3- |
@@ -29,11 +44,9 @@ list_github_tags() {
 }
 
 list_all_versions() {
-	local releases_path next_link all_versions versions cmd_out
+	local next_link all_versions versions cmd_out
 
-	releases_path=https://api.github.com/repos/containers/podman/releases
-
-	next_link="${releases_path}?per_page=100&page=1"
+	next_link="${RELEASES_URL_PREFIX}?per_page=100&page=1"
 	all_versions=""
 
 	while [ -n "${next_link}" ]; do
@@ -42,7 +55,7 @@ list_all_versions() {
 		cmd_out=$(curl "${curl_opts[*]}" --verbose --retry 10 --retry-delay 2 -s "${next_link}" 2>&1)
 
 		# Get versions
-		versions=$(echo "${cmd_out}" | grep "\"tag_name\":" | sed 's/^ *"tag_name"\: *"v\?\(.*\)", *$/\1/')
+		versions=$(grep_versions "${cmd_out}")
 		all_versions="${versions}\n${all_versions}"
 
 		# Get next link
