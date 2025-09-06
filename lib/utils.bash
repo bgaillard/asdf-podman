@@ -83,14 +83,37 @@ ${all_versions}"
 }
 
 download_release() {
-	local archive_name version filename url
+	local arch kernel archive_name version filename url
 	version="$1"
 	filename="$2"
 
-	if [[ "$(uname)" == "Darwin" ]]; then
-		archive_name="podman-remote-release-darwin_amd64.zip"
+	arch="$(uname -m)"
+	kernel="$(uname -s)"
+
+	# MacOS
+	if [[ "${kernel}" == "Darwin" ]]; then
+		if [[ "${arch}" == "x86_64" || "${arch}" == "amd64" ]]; then
+			archive_name="podman-remote-release-darwin_amd64.zip"
+		elif [[ "${arch}" == "arm64" || "${arch}" == "aarch64" ]]; then
+			archive_name="podman-remote-release-darwin_arm64.zip"
+		else
+			fail "Unsupported architecture: ${arch}"
+		fi
+
+	# Linux
+	elif [[ "${kernel}" == "Linux" ]]; then
+
+		if [[ "${arch}" == "x86_64" || "${arch}" == "amd64" ]]; then
+			archive_name="podman-remote-static-linux_amd64.tar.gz"
+		elif [[ "${arch}" == "aarch64" || "${arch}" == "arm64" ]]; then
+			archive_name="podman-remote-static-linux_arm64.tar.gz"
+		else
+			fail "Unsupported architecture: ${arch}"
+		fi
+
+	# Unsupported OS
 	else
-		archive_name="podman-remote-static-linux_amd64.tar.gz"
+		fail "Unsupported OS: ${kernel}"
 	fi
 
 	url="$GH_REPO/releases/download/v${version}/${archive_name}"

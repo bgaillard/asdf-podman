@@ -8,12 +8,20 @@ plugin_dir=$(dirname "$(dirname "$current_script_path")")
 # shellcheck source=./lib/utils.bash
 source "${plugin_dir}/lib/utils.bash"
 
+kernel="$(uname -s)"
+arch="$(uname -m)"
+
 mkdir -p "$ASDF_DOWNLOAD_PATH"
 
 # Create archive file extension based on OS
 ext="tar.gz"
-if [[ "$(uname)" == "Darwin" ]]; then
+
+if [[ "${kernel}" == "Linux" ]]; then
+	ext="tar.gz"
+elif [[ "${kernel}" == "Darwin" ]]; then
 	ext="zip"
+else
+	fail "Unsupported OS: ${kernel}"
 fi
 
 release_file="$ASDF_DOWNLOAD_PATH/$TOOL_NAME-$ASDF_INSTALL_VERSION.${ext}"
@@ -34,7 +42,18 @@ rm "$release_file"
 # Rename the binary to the expected name
 binary_path=podman-remote-static-linux_amd64
 
-if [[ "$(uname)" == "Darwin" ]]; then
+# Linux
+if [[ "${kernel}" == "Linux" ]]; then
+	if [[ "${arch}" == "x86_64" || "${arch}" == "amd64" ]]; then
+		binary_path="podman-remote-static-linux_amd64"
+	elif [[ "${arch}" == "aarch64" || "${arch}" == "arm64" ]]; then
+		binary_path="podman-remote-static-linux_arm64"
+	else
+		fail "Unsupported architecture: ${arch}"
+	fi
+
+# MacOS
+elif [[ "${kernel}" == "Darwin" ]]; then
 	binary_path="podman-${ASDF_INSTALL_VERSION}/usr/bin/podman"
 fi
 
