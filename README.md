@@ -2,7 +2,7 @@
 
 # asdf-podman [![Build](https://github.com/bgaillard/asdf-podman/actions/workflows/build.yml/badge.svg)](https://github.com/bgaillard/asdf-podman/actions/workflows/build.yml) [![Lint](https://github.com/bgaillard/asdf-podman/actions/workflows/lint.yml/badge.svg)](https://github.com/bgaillard/asdf-podman/actions/workflows/lint.yml)
 
-[podman](https://github.com/bgaillard/asdf-podman) plugin for the [asdf version manager](https://asdf-vm.com).
+[Podman](https://podman.io/) plugin for the [asdf version manager](https://asdf-vm.com).
 
 </div>
 
